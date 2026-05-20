@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dip Tube Inventory System</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div id="auth-overlay" class="auth-overlay">
+    <div class="auth-box">
+      <div class="auth-logo">DT<span>IMS</span></div>
+      <h2>Dip Tube Inventory</h2>
+      <p class="auth-sub">Management System</p>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="auth-email" placeholder="admin@company.com" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="auth-password" placeholder="••••••••" />
+      </div>
+      <div id="auth-error" class="auth-error"></div>
+      <button id="btn-login" class="btn-primary full-width">Login</button>
+      <button id="btn-register" class="btn-ghost full-width">Create Account</button>
+    </div>
+  </div>
+
+  <div id="app" class="app hidden">
+
+    <aside class="sidebar">
+      <div class="sidebar-logo">DT<span>IMS</span></div>
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-view="dashboard">
+          <span class="nav-icon">▣</span> Dashboard
+        </button>
+        <button class="nav-item" data-view="inventory">
+          <span class="nav-icon">⊞</span> Inventory
+        </button>
+        <button class="nav-item" data-view="transactions">
+          <span class="nav-icon">↕</span> Transactions
+        </button>
+        <button class="nav-item" data-view="history">
+          <span class="nav-icon">≡</span> History
+        </button>
+        <button class="nav-item" data-view="settings">
+          <span class="nav-icon">⚙</span> Settings
+        </button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="user-info" id="user-display"></div>
+        <button id="btn-logout" class="btn-ghost small">Logout</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+
+      <!-- DASHBOARD VIEW -->
+      <div id="view-dashboard" class="view active">
+        <div class="view-header">
+          <h1>Dashboard</h1>
+          <div class="header-meta" id="last-updated"></div>
+        </div>
+
+        <div id="alert-banner" class="alert-banner hidden"></div>
+
+        <div class="stats-grid" id="stats-grid"></div>
+
+        <div class="section-header">
+          <h2>Inventory Status</h2>
+        </div>
+        <div class="inventory-table-wrap">
+          <table class="inventory-table" id="dashboard-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Chemical</th>
+                <th>Model (Key Code)</th>
+                <th>Current Stock</th>
+                <th>Safety Level</th>
+                <th>Status</th>
+                <th>Last Updated</th>
+              </tr>
+            </thead>
+            <tbody id="dashboard-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- INVENTORY VIEW -->
+      <div id="view-inventory" class="view">
+        <div class="view-header">
+          <h1>Inventory Management</h1>
+          <button class="btn-primary" id="btn-add-item">+ Add Item</button>
+        </div>
+
+        <div class="inventory-table-wrap">
+          <table class="inventory-table" id="inventory-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Chemical</th>
+                <th>Model (Key Code)</th>
+                <th>Type</th>
+                <th>Current Stock</th>
+                <th>Safety Level</th>
+                <th>Unit</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="inventory-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- TRANSACTIONS VIEW -->
+      <div id="view-transactions" class="view">
+        <div class="view-header">
+          <h1>Transactions</h1>
+        </div>
+        <div class="tx-form-card">
+          <h3>Record Transaction</h3>
+          <div class="tx-form">
+            <div class="form-group">
+              <label>Date</label>
+              <input type="date" id="tx-date" />
+            </div>
+            <div class="form-group">
+              <label>Chemical / Item</label>
+              <select id="tx-item"></select>
+            </div>
+            <div class="form-group">
+              <label>Transaction Type</label>
+              <select id="tx-type">
+                <option value="in">📥 Incoming (입고)</option>
+                <option value="out">📤 Outgoing (사용)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Quantity</label>
+              <input type="number" id="tx-qty" min="1" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label>Memo (선택)</label>
+              <input type="text" id="tx-memo" placeholder="메모 입력..." />
+            </div>
+            <button class="btn-primary" id="btn-submit-tx">Record</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- HISTORY VIEW -->
+      <div id="view-history" class="view">
+        <div class="view-header">
+          <h1>Transaction History</h1>
+        </div>
+        <div class="filter-bar">
+          <select id="filter-item">
+            <option value="">All Items</option>
+          </select>
+          <select id="filter-type">
+            <option value="">All Types</option>
+            <option value="in">Incoming</option>
+            <option value="out">Outgoing</option>
+            <option value="set">Stock Set</option>
+          </select>
+          <input type="date" id="filter-from" placeholder="From" />
+          <span>—</span>
+          <input type="date" id="filter-to" placeholder="To" />
+          <button class="btn-ghost" id="btn-filter">Filter</button>
+          <button class="btn-ghost" id="btn-reset-filter">Reset</button>
+        </div>
+        <div class="inventory-table-wrap">
+          <table class="inventory-table" id="history-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Chemical</th>
+                <th>Type</th>
+                <th>Quantity</th>
+                <th>Stock After</th>
+                <th>Memo</th>
+                <th>Recorded By</th>
+              </tr>
+            </thead>
+            <tbody id="history-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SETTINGS VIEW -->
+      <div id="view-settings" class="view">
+        <div class="view-header">
+          <h1>Settings</h1>
+        </div>
+        <div class="settings-card">
+          <h3>Safety Stock Levels</h3>
+          <p class="settings-desc">각 항목의 안전 재고 레벨을 설정합니다. 현재 재고가 이 수준 이하로 떨어지면 경고가 표시됩니다.</p>
+          <div id="safety-settings-list"></div>
+          <button class="btn-primary" id="btn-save-safety">Save Safety Levels</button>
+        </div>
+        <div class="settings-card">
+          <h3>Manual Stock Override</h3>
+          <p class="settings-desc">현재 재고 수량을 직접 입력하여 수정합니다.</p>
+          <div class="tx-form">
+            <div class="form-group">
+              <label>Item</label>
+              <select id="override-item"></select>
+            </div>
+            <div class="form-group">
+              <label>New Stock Quantity</label>
+              <input type="number" id="override-qty" min="0" placeholder="0" />
+            </div>
+            <div class="form-group">
+              <label>Reason</label>
+              <input type="text" id="override-reason" placeholder="재고 수정 사유..." />
+            </div>
+            <button class="btn-warning" id="btn-override">Override Stock</button>
+          </div>
+        </div>
+        <div class="settings-card">
+          <h3>Firebase Configuration</h3>
+          <p class="settings-desc">Firebase 설정을 업데이트 합니다. <code>firebase-config.js</code> 파일을 수정하세요.</p>
+          <div class="config-display" id="config-display"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- MODAL -->
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal-box" id="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-title">Add Item</h3>
+        <button id="modal-close" class="modal-close">✕</button>
+      </div>
+      <div id="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="firebase-config.js"></script>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
