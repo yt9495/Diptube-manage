@@ -12,17 +12,16 @@ import {
   setDoc,
   addDoc,
   updateDoc,
+  deleteDoc,
   query,
   orderBy,
   onSnapshot,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// ── Init Firebase ──
 const app = initializeApp(window.FIREBASE_CONFIG);
-const db = getFirestore(app);
+const db  = getFirestore(app);
 
-// ── Default Dip Tube Chemicals ──
 const DEFAULT_ITEMS = [
   { id: "code12", name: "HF (Hydrofluoric Acid)",    code: "Code 12", type: "key",    unit: "ea", stock: 0, safety: 5 },
   { id: "code6",  name: "HCl (Hydrochloric Acid)",   code: "Code 6",  type: "key",    unit: "ea", stock: 0, safety: 5 },
@@ -32,23 +31,18 @@ const DEFAULT_ITEMS = [
   { id: "code2",  name: "H₂SO₄ (Sulfuric Acid)",     code: "Code 2",  type: "key",    unit: "ea", stock: 0, safety: 5 },
 ];
 
-// ── State ──
 let inventoryItems = [];
-let transactions = [];
-let unsubInventory = null;
-let unsubTx = null;
+let transactions   = [];
 
-// ── App Start (no auth) ──
+// ── Start ──
 async function startApp() {
   document.getElementById("app").classList.remove("hidden");
   await ensureDefaultItems();
   startListeners();
   switchView("dashboard");
 }
-
 startApp();
 
-// ── Ensure Default Items ──
 async function ensureDefaultItems() {
   const snap = await getDocs(collection(db, "inventory"));
   if (snap.empty) {
@@ -62,9 +56,9 @@ async function ensureDefaultItems() {
   }
 }
 
-// ── Real-time Listeners ──
+// ── Listeners ──
 function startListeners() {
-  unsubInventory = onSnapshot(collection(db, "inventory"), (snap) => {
+  onSnapshot(collection(db, "inventory"), (snap) => {
     inventoryItems = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     inventoryItems.sort((a, b) => {
       if (a.type === b.type) return a.name.localeCompare(b.name);
@@ -76,8 +70,9 @@ function startListeners() {
     populateSelects();
   });
 
-  const txRef = query(collection(db, "transactions"), orderBy("date", "desc"), orderBy("createdAt", "desc"));
-  unsubTx = onSnapshot(txRef, (snap) => {
+  // date 단일 정렬 — 복합 인덱스 불필요
+  const txRef = query(collection(db, "transactions"), orderBy("date", "desc"));
+  onSnapshot(txRef, (snap) => {
     transactions = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderHistory();
   });
@@ -99,9 +94,8 @@ function switchView(name) {
 
 // ── Dashboard ──
 function renderDashboard() {
-  const now = new Date();
   document.getElementById("last-updated").textContent =
-    "Updated: " + now.toLocaleString("ko-KR");
+    "Updated: " + new Date().toLocaleString("ko-KR");
 
   const total  = inventoryItems.length;
   const danger = inventoryItems.filter(i => i.stock === 0).length;
@@ -116,40 +110,34 @@ function renderDashboard() {
   `;
 
   const alertItems = inventoryItems.filter(i => i.stock <= i.safety);
-  const alertBanner = document.getElementById("alert-banner");
+  const banner = document.getElementById("alert-banner");
   if (alertItems.length > 0) {
-    alertBanner.classList.remove("hidden");
-    alertBanner.innerHTML = `<strong>⚠ 안전 재고 경고 (${alertItems.length}개 항목)</strong><br/>` +
+    banner.classList.remove("hidden");
+    banner.innerHTML = `<strong>⚠ 안전 재고 경고 (${alertItems.length}개 항목)</strong><br/>` +
       alertItems.map(i =>
         `• ${i.name} (${i.code}): 현재 <b>${i.stock} ${i.unit}</b> — 안전재고: ${i.safety} ${i.unit}` +
         (i.stock === 0 ? " &nbsp;<span style='color:var(--red-text);font-weight:600'>[재고 없음]</span>" : "")
       ).join("<br/>");
   } else {
-    alertBanner.classList.add("hidden");
+    banner.classList.add("hidden");
   }
 
-  const tbody = document.getElementById("dashboard-tbody");
-  tbody.innerHTML = inventoryItems.map((item, idx) => {
-    const status = getStatus(item);
-    const updatedAt = item.updatedAt ? fmtTs(item.updatedAt) : "—";
-    return `<tr>
+  document.getElementById("dashboard-tbody").innerHTML =
+    inventoryItems.map((item, idx) => `<tr>
       <td>${idx + 1}</td>
       <td class="chemical-name">${item.name}</td>
       <td><span class="code-badge">${item.code}</span></td>
       <td><span class="stock-value ${stockClass(item)}">${item.stock} ${item.unit}</span></td>
       <td>${item.safety} ${item.unit}</td>
-      <td>${statusBadge(status)}</td>
-      <td style="font-size:12px;color:var(--text3);font-family:var(--font-mono)">${updatedAt}</td>
-    </tr>`;
-  }).join("") || emptyRow(7);
+      <td>${statusBadge(getStatus(item))}</td>
+      <td style="font-size:12px;color:var(--text3);font-family:var(--font-mono)">${fmtTs(item.updatedAt)}</td>
+    </tr>`).join("") || emptyRow(7);
 }
 
 // ── Inventory ──
 function renderInventory() {
-  const tbody = document.getElementById("inventory-tbody");
-  tbody.innerHTML = inventoryItems.map((item, idx) => {
-    const status = getStatus(item);
-    return `<tr>
+  document.getElementById("inventory-tbody").innerHTML =
+    inventoryItems.map((item, idx) => `<tr>
       <td>${idx + 1}</td>
       <td class="chemical-name">${item.name}</td>
       <td><span class="code-badge">${item.code}</span></td>
@@ -157,63 +145,58 @@ function renderInventory() {
       <td><span class="stock-value ${stockClass(item)}">${item.stock} ${item.unit}</span></td>
       <td>${item.safety} ${item.unit}</td>
       <td>${item.unit}</td>
-      <td>${statusBadge(status)}</td>
+      <td>${statusBadge(getStatus(item))}</td>
       <td>
         <div class="action-btns">
           <button class="btn-ghost btn-sm" onclick="editItem('${item.id}')">Edit</button>
-          <button class="btn-danger" onclick="deleteItem('${item.id}', '${item.name}')">Del</button>
+          <button class="btn-danger" onclick="deleteItem('${item.id}', '${item.name.replace(/'/g,"\\'")}')">Del</button>
         </div>
       </td>
-    </tr>`;
-  }).join("") || emptyRow(9);
+    </tr>`).join("") || emptyRow(9);
 }
 
 // ── History ──
 function renderHistory(filtered) {
   const data = filtered || transactions;
-  const tbody = document.getElementById("history-tbody");
-  tbody.innerHTML = data.map(tx => {
-    const item = inventoryItems.find(i => i.id === tx.itemId);
-    const name = item ? item.name : (tx.itemName || tx.itemId);
-    const typeLabel = tx.type === "in" ? "📥 입고" : tx.type === "out" ? "📤 사용" : "✏ 수정";
-    const typeCls   = tx.type === "in" ? "tx-in" : tx.type === "out" ? "tx-out" : "tx-set";
-    const qty = tx.type === "out" ? `-${tx.qty}` : tx.type === "in" ? `+${tx.qty}` : `=${tx.qty}`;
-    return `<tr>
-      <td style="font-family:var(--font-mono);font-size:12px">${tx.date || "—"}</td>
-      <td class="chemical-name">${name}</td>
-      <td class="${typeCls}">${typeLabel}</td>
-      <td style="font-family:var(--font-mono)">${qty} ${tx.unit || ""}</td>
-      <td style="font-family:var(--font-mono)">${tx.stockAfter ?? "—"} ${tx.unit || ""}</td>
-      <td style="color:var(--text2)">${tx.memo || "—"}</td>
-      <td style="font-size:12px;color:var(--text3)">${tx.operator || "—"}</td>
-    </tr>`;
-  }).join("") || emptyRow(7);
+  document.getElementById("history-tbody").innerHTML =
+    data.map(tx => {
+      const item = inventoryItems.find(i => i.id === tx.itemId);
+      const name = item ? item.name : (tx.itemName || tx.itemId);
+      const typeLabel = tx.type === "in" ? "📥 입고" : tx.type === "out" ? "📤 사용" : "✏ 수정";
+      const typeCls   = tx.type === "in" ? "tx-in" : tx.type === "out" ? "tx-out" : "tx-set";
+      const qty = tx.type === "out" ? `-${tx.qty}` : tx.type === "in" ? `+${tx.qty}` : `=${tx.qty}`;
+      return `<tr>
+        <td style="font-family:var(--font-mono);font-size:12px">${tx.date || "—"}</td>
+        <td class="chemical-name">${name}</td>
+        <td class="${typeCls}">${typeLabel}</td>
+        <td style="font-family:var(--font-mono)">${qty} ${tx.unit || ""}</td>
+        <td style="font-family:var(--font-mono)">${tx.stockAfter ?? "—"} ${tx.unit || ""}</td>
+        <td style="color:var(--text2)">${tx.memo || "—"}</td>
+        <td style="font-size:12px;color:var(--text3)">${tx.operator || "—"}</td>
+      </tr>`;
+    }).join("") || emptyRow(7);
 }
 
 // ── Settings ──
 function renderSettings() {
-  const list = document.getElementById("safety-settings-list");
-  list.innerHTML = inventoryItems.map(item =>
-    `<div class="safety-item">
-      <div class="safety-name">${item.name} <span class="code">${item.code}</span></div>
-      <input type="number" min="0" data-id="${item.id}" value="${item.safety}" />
-      <span style="font-size:12px;color:var(--text2)">${item.unit}</span>
-    </div>`
-  ).join("");
+  document.getElementById("safety-settings-list").innerHTML =
+    inventoryItems.map(item => `
+      <div class="safety-item">
+        <div class="safety-name">${item.name} <span class="code">${item.code}</span></div>
+        <input type="number" min="0" data-id="${item.id}" value="${item.safety}" />
+        <span style="font-size:12px;color:var(--text2)">${item.unit}</span>
+      </div>`).join("");
 
-  const overrideSelect = document.getElementById("override-item");
-  overrideSelect.innerHTML = inventoryItems.map(i =>
-    `<option value="${i.id}">${i.name} (${i.code})</option>`
-  ).join("");
+  document.getElementById("override-item").innerHTML =
+    inventoryItems.map(i => `<option value="${i.id}">${i.name} (${i.code})</option>`).join("");
 
-  const cfg = window.FIREBASE_CONFIG;
   document.getElementById("config-display").innerHTML =
-    Object.entries(cfg).map(([k, v]) =>
-      `<div><span style="color:var(--blue-text)">${k}</span>: "${v}"</div>`
-    ).join("");
+    Object.entries(window.FIREBASE_CONFIG)
+      .map(([k, v]) => `<div><span style="color:var(--blue-text)">${k}</span>: "${v}"</div>`)
+      .join("");
 }
 
-// ── Populate Selects ──
+// ── Selects ──
 function populateSelects() {
   ["tx-item", "filter-item"].forEach(id => {
     const el = document.getElementById(id);
@@ -221,15 +204,13 @@ function populateSelects() {
     const prev = el.value;
     const base = id === "filter-item" ? '<option value="">All Items</option>' : "";
     el.innerHTML = base + inventoryItems.map(i =>
-      `<option value="${i.id}">${i.name} (${i.code})</option>`
-    ).join("");
+      `<option value="${i.id}">${i.name} (${i.code})</option>`).join("");
     if (prev) el.value = prev;
   });
 }
 
 // ── Transactions ──
-const txDateEl = document.getElementById("tx-date");
-txDateEl.value = new Date().toISOString().split("T")[0];
+document.getElementById("tx-date").value = new Date().toISOString().split("T")[0];
 
 document.getElementById("btn-submit-tx").addEventListener("click", async () => {
   const itemId   = document.getElementById("tx-item").value;
@@ -239,9 +220,7 @@ document.getElementById("btn-submit-tx").addEventListener("click", async () => {
   const date     = document.getElementById("tx-date").value;
   const operator = document.getElementById("tx-operator").value.trim() || "—";
 
-  if (!itemId || !qty || qty < 1 || !date) {
-    alert("날짜, 항목, 수량을 모두 입력하세요."); return;
-  }
+  if (!itemId || !qty || qty < 1 || !date) { alert("날짜, 항목, 수량을 모두 입력하세요."); return; }
 
   const item = inventoryItems.find(i => i.id === itemId);
   if (!item) return;
@@ -251,21 +230,19 @@ document.getElementById("btn-submit-tx").addEventListener("click", async () => {
   else if (type === "out") newStock = Math.max(0, newStock - qty);
 
   try {
-    await updateDoc(doc(db, "inventory", itemId), {
-      stock: newStock, updatedAt: serverTimestamp()
-    });
+    await updateDoc(doc(db, "inventory", itemId), { stock: newStock, updatedAt: serverTimestamp() });
     await addDoc(collection(db, "transactions"), {
       itemId, itemName: item.name, type, qty,
       stockAfter: newStock, unit: item.unit,
       memo, date, operator, createdAt: serverTimestamp()
     });
-    document.getElementById("tx-qty").value = "";
+    document.getElementById("tx-qty").value  = "";
     document.getElementById("tx-memo").value = "";
     alert(`✓ 완료\n${item.name}: ${type === "in" ? "+" : "-"}${qty} → 재고 ${newStock} ${item.unit}`);
   } catch (e) { alert("오류: " + e.message); }
 });
 
-// ── Save Safety Levels ──
+// ── Safety Levels ──
 document.getElementById("btn-save-safety").addEventListener("click", async () => {
   const inputs = document.querySelectorAll("#safety-settings-list input[data-id]");
   await Promise.all([...inputs].map(inp => {
@@ -295,23 +272,18 @@ document.getElementById("btn-override").addEventListener("click", async () => {
       date: new Date().toISOString().split("T")[0],
       operator, createdAt: serverTimestamp()
     });
-    document.getElementById("override-qty").value = "";
+    document.getElementById("override-qty").value    = "";
     document.getElementById("override-reason").value = "";
     alert("✓ 재고가 수정되었습니다.");
   } catch (e) { alert("오류: " + e.message); }
 });
 
-// ── Add / Edit Item Modal ──
+// ── Modal ──
 document.getElementById("btn-add-item").addEventListener("click", () => openModal(null));
-document.getElementById("modal-close").addEventListener("click", closeModal);
+document.getElementById("modal-close").addEventListener("click", () => closeModal());
 document.getElementById("modal-overlay").addEventListener("click", (e) => {
   if (e.target === document.getElementById("modal-overlay")) closeModal();
 });
-
-window.editItem = (id) => {
-  const item = inventoryItems.find(i => i.id === id);
-  if (item) openModal(item);
-};
 
 function openModal(item) {
   const isEdit = !!item;
@@ -352,7 +324,16 @@ function openModal(item) {
   document.getElementById("modal-overlay").classList.remove("hidden");
 }
 
-window.saveItem = async (id) => {
+function closeModal() {
+  document.getElementById("modal-overlay").classList.add("hidden");
+}
+
+function editItem(id) {
+  const item = inventoryItems.find(i => i.id === id);
+  if (item) openModal(item);
+}
+
+async function saveItem(id) {
   const name   = document.getElementById("m-name").value.trim();
   const code   = document.getElementById("m-code").value.trim();
   const type   = document.getElementById("m-type").value;
@@ -366,27 +347,22 @@ window.saveItem = async (id) => {
     else    { await setDoc(doc(db, "inventory", "item_" + Date.now()), data); }
     closeModal();
   } catch (e) { alert("오류: " + e.message); }
-};
+}
 
-window.closeModal = () => document.getElementById("modal-overlay").classList.add("hidden");
-
-window.deleteItem = async (id, name) => {
+async function deleteItem(id, name) {
   if (!confirm(`"${name}" 항목을 삭제하시겠습니까?`)) return;
-  const { deleteDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
-  await deleteDoc(doc(db, "inventory", id));
-};
+  try { await deleteDoc(doc(db, "inventory", id)); }
+  catch (e) { alert("오류: " + e.message); }
+}
+
+// ── 전역 등록 (onclick 핸들러용) ──
+window.editItem   = editItem;
+window.saveItem   = saveItem;
+window.closeModal = closeModal;
+window.deleteItem = deleteItem;
 
 // ── History Filter ──
-document.getElementById("btn-filter").addEventListener("click", applyFilter);
-document.getElementById("btn-reset-filter").addEventListener("click", () => {
-  document.getElementById("filter-item").value = "";
-  document.getElementById("filter-type").value = "";
-  document.getElementById("filter-from").value = "";
-  document.getElementById("filter-to").value   = "";
-  renderHistory();
-});
-
-function applyFilter() {
+document.getElementById("btn-filter").addEventListener("click", () => {
   const itemId = document.getElementById("filter-item").value;
   const type   = document.getElementById("filter-type").value;
   const from   = document.getElementById("filter-from").value;
@@ -397,40 +373,38 @@ function applyFilter() {
   if (from)   data = data.filter(t => t.date >= from);
   if (to)     data = data.filter(t => t.date <= to);
   renderHistory(data);
-}
+});
+
+document.getElementById("btn-reset-filter").addEventListener("click", () => {
+  ["filter-item","filter-type","filter-from","filter-to"].forEach(id => {
+    document.getElementById(id).value = "";
+  });
+  renderHistory();
+});
 
 // ── Helpers ──
 function getStatus(item) {
-  if (item.stock === 0)                  return "out";
-  if (item.stock <= item.safety)         return "low";
-  if (item.stock <= item.safety * 1.5)   return "warn";
+  if (item.stock === 0)                return "out";
+  if (item.stock <= item.safety)       return "low";
+  if (item.stock <= item.safety * 1.5) return "warn";
   return "ok";
 }
-
 function statusBadge(status) {
-  const map = {
-    out:  ["status-danger",  "재고 없음"],
-    low:  ["status-danger",  "안전재고 미달"],
-    warn: ["status-warning", "재고 부족"],
-    ok:   ["status-ok",      "정상"],
-  };
-  const [cls, label] = map[status] || ["status-info", status];
+  const m = { out:["status-danger","재고 없음"], low:["status-danger","안전재고 미달"], warn:["status-warning","재고 부족"], ok:["status-ok","정상"] };
+  const [cls, label] = m[status] || ["status-info", status];
   return `<span class="status-badge ${cls}">${label}</span>`;
 }
-
 function stockClass(item) {
   if (item.stock === 0)                return "stock-low";
   if (item.stock <= item.safety)       return "stock-low";
   if (item.stock <= item.safety * 1.5) return "stock-warn";
   return "stock-ok";
 }
-
 function emptyRow(cols) {
   return `<tr class="empty-row"><td colspan="${cols}">데이터 없음</td></tr>`;
 }
-
 function fmtTs(ts) {
   if (!ts) return "—";
   const d = ts.toDate ? ts.toDate() : new Date(ts);
-  return d.toLocaleDateString("ko-KR") + " " + d.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString("ko-KR") + " " + d.toLocaleTimeString("ko-KR", { hour:"2-digit", minute:"2-digit" });
 }
