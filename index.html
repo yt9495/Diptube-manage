@@ -20,6 +20,10 @@
         <button class="nav-item" data-view="inventory">
           <span class="nav-icon">⊞</span> Inventory
         </button>
+        <button class="nav-item" data-view="incoming">
+          <span class="nav-icon">🚚</span> Incoming
+          <span class="nav-badge hidden" id="nav-incoming-badge">0</span>
+        </button>
         <button class="nav-item" data-view="transactions">
           <span class="nav-icon">↕</span> Transactions
         </button>
@@ -51,7 +55,8 @@
             <thead>
               <tr>
                 <th>#</th><th>Chemical</th><th>Model (Key Code)</th>
-                <th>Current Stock</th><th>Safety Level</th><th>Status</th><th>Last Updated</th>
+                <th>Current Stock</th><th>입고예정</th><th>가용재고</th>
+                <th>Safety Level</th><th>Status</th><th>Last Updated</th>
               </tr>
             </thead>
             <tbody id="dashboard-tbody"></tbody>
@@ -70,10 +75,55 @@
             <thead>
               <tr>
                 <th>#</th><th>Chemical</th><th>Model (Key Code)</th><th>Type</th>
-                <th>Current Stock</th><th>Safety Level</th><th>Unit</th><th>Status</th><th>Actions</th>
+                <th>Current Stock</th><th>입고예정</th><th>가용재고</th>
+                <th>Safety Level</th><th>Unit</th><th>Status</th><th>Actions</th>
               </tr>
             </thead>
             <tbody id="inventory-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- INCOMING (입고 예정) -->
+      <div id="view-incoming" class="view">
+        <div class="view-header">
+          <h1>Incoming Shipments</h1>
+          <div style="display:flex;gap:8px">
+            <button class="btn-ghost" id="btn-add-shipment">+ 직접 입력</button>
+            <button class="btn-primary" id="btn-pick-pdf">📄 Packing Slip PDF 불러오기</button>
+          </div>
+        </div>
+
+        <div class="dropzone" id="pdf-dropzone">
+          <div class="dropzone-icon">📄</div>
+          <div class="dropzone-title">Packing Slip PDF를 여기에 끌어다 놓으세요</div>
+          <div class="dropzone-sub">INV 번호 · 선적일 · 운송장 · 품목/수량을 자동으로 읽어 입고예정으로 등록합니다.</div>
+          <input type="file" id="pdf-file" accept="application/pdf" multiple hidden />
+          <div class="dropzone-status hidden" id="pdf-status"></div>
+        </div>
+
+        <div class="stats-grid" id="incoming-stats"></div>
+
+        <div class="filter-bar">
+          <select id="ship-filter-status">
+            <option value="open">진행중 (미도착/부분입고)</option>
+            <option value="">전체</option>
+            <option value="pending">미도착</option>
+            <option value="partial">부분입고</option>
+            <option value="received">입고완료</option>
+            <option value="cancelled">취소</option>
+          </select>
+        </div>
+
+        <div class="inventory-table-wrap">
+          <table class="inventory-table">
+            <thead>
+              <tr>
+                <th>Invoice No.</th><th>Ship Date</th><th>도착예정(ETA)</th>
+                <th>Tracking</th><th>품목</th><th>수량 (입고/예정)</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="shipment-tbody"></tbody>
           </table>
         </div>
       </div>

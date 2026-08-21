@@ -8,5 +8,8 @@ service cloud.firestore {
       allow read, create: if true;
       allow update, delete: if false;
     }
+    match /shipments/{shipId} {
+      allow read, write: if true;
+    }
   }
 }

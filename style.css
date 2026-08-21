@@ -114,6 +114,8 @@ body {
 .main-content {
   margin-left: var(--sidebar-w);
   flex: 1;
+  min-width: 0;          /* 넓은 표가 페이지 전체를 밀어내지 않도록 */
+  max-width: calc(100vw - var(--sidebar-w));
   padding: 2rem 2.5rem;
   min-height: 100vh;
 }
@@ -416,3 +418,108 @@ code { font-family: var(--font-mono); background: var(--bg2); padding: 2px 6px; 
 
 /* ── EMPTY STATE ── */
 .empty-row td { text-align: center; color: var(--text3); padding: 2rem !important; }
+
+/* ══════════════════════════════════════
+   INCOMING SHIPMENTS (입고 예정)
+   ══════════════════════════════════════ */
+
+.nav-badge {
+  margin-left: auto;
+  background: var(--blue);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 10px;
+}
+
+.dropzone {
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--radius-lg);
+  background: var(--bg2);
+  padding: 1.75rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  margin-bottom: 1.5rem;
+}
+.dropzone:hover,
+.dropzone.dragover { background: var(--blue-bg); border-color: var(--blue); }
+.dropzone-icon  { font-size: 26px; line-height: 1; margin-bottom: 0.5rem; }
+.dropzone-title { font-size: 14px; font-weight: 500; }
+.dropzone-sub   { font-size: 12.5px; color: var(--text2); margin-top: 0.25rem; }
+.dropzone-status {
+  margin-top: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--blue-text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  white-space: pre-wrap;
+}
+.dropzone-status.error { color: var(--red-text); background: var(--red-bg); border-color: var(--red); }
+
+.eta-badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--gray-bg);
+  color: var(--text2);
+}
+.eta-badge.soon    { background: var(--amber-bg); color: var(--amber-text); }
+.eta-badge.overdue { background: var(--red-bg);   color: var(--red-text); }
+
+.incoming-qty { font-family: var(--font-mono); color: var(--blue-text); font-weight: 500; }
+.incoming-qty.zero { color: var(--text3); font-weight: 400; }
+.available-qty { font-family: var(--font-mono); font-weight: 600; }
+
+.modal-box.wide { width: 820px; }
+
+.line-table { width: 100%; border-collapse: collapse; font-size: 13px; margin-bottom: 0.75rem; }
+.line-table th {
+  text-align: left; font-size: 11px; font-weight: 500; text-transform: uppercase;
+  letter-spacing: 0.04em; color: var(--text3); padding: 0.4rem 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.line-table td { padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--bg3); vertical-align: middle; }
+.line-table select,
+.line-table input {
+  width: 100%; padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border2); border-radius: 6px;
+  font-family: var(--font-main); font-size: 13px; background: var(--bg); outline: none;
+}
+.line-table input[type="number"] { font-family: var(--font-mono); }
+.line-table .src { font-family: var(--font-mono); font-size: 11.5px; color: var(--text2); white-space: nowrap; }
+.line-table tr.unmatched select { border-color: var(--amber); background: var(--amber-bg); }
+.line-row-del {
+  background: none; border: none; cursor: pointer;
+  color: var(--text3); font-size: 15px; padding: 2px 6px; line-height: 1;
+}
+.line-row-del:hover { color: var(--red-text); }
+
+.modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 1rem; }
+.modal-note {
+  font-size: 12.5px; color: var(--amber-text); background: var(--amber-bg);
+  border-radius: var(--radius); padding: 0.6rem 0.8rem; margin-bottom: 1rem;
+}
+
+.stat-card.info { background: var(--blue-bg); }
+.stat-card.info .stat-label { color: var(--blue); }
+.stat-card.info .stat-value { color: var(--blue-text); }
+
+/* 입고예정 테이블 — 줄바꿈 방지 */
+#shipment-tbody td:nth-child(2),
+#shipment-tbody td:nth-child(3),
+#shipment-tbody td:nth-child(6),
+#shipment-tbody td:nth-child(7),
+#shipment-tbody td:nth-child(8) { white-space: nowrap; }
+#shipment-tbody td:nth-child(4) { font-size: 11.5px; }
+.action-btns button { white-space: nowrap; }
