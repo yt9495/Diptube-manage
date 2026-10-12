@@ -1,3 +1,7 @@
+/*
+ * © 2025–2026 Young Tai Kang. All rights reserved.
+ * Licensed to JNF AM LLC for internal use.
+ */
 window.FIREBASE_CONFIG = {
   apiKey: "AIzaSyDXAImWxaLQunJxfahMQfcZGDDX7AICgZ8",
   authDomain: "diptube-manage.firebaseapp.com",
